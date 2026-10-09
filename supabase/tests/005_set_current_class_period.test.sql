@@ -64,7 +64,7 @@ select set_config(
 );
 set local role authenticated;
 select throws_like(
-  $$select public.set_current_class_period('72000000-0000-0000-0000-000000000001')$$,
+  $$select public.set_current_class_period('72000000-0000-0000-0000-000000000002')$$,
   '%row-level security%',
   'non-admin authenticated user cannot switch periods'
 );
