@@ -5,6 +5,12 @@ import { Reveal } from "@/components/motion/reveal";
 export const metadata: Metadata = {
   title: "Sobre",
   description: "Conheça a proposta da Arte Nativa e a tradição que ganha vida por meio da dança e da comunidade.",
+  alternates: { canonical: "/sobre" },
+  openGraph: {
+    title: "Sobre | Arte Nativa",
+    description: "Conheça a proposta da Arte Nativa e a tradição que ganha vida por meio da dança e da comunidade.",
+    url: "/sobre",
+  },
 };
 
 export default function AboutPage() {
