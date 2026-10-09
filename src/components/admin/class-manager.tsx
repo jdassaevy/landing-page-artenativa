@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Plus, Power, X } from "lucide-react";
+import { Copy, Edit3, Plus, Power, X } from "lucide-react";
 import { FormEvent, useMemo, useState, useTransition } from "react";
 
 import { WEEKDAY_LABELS, type Weekday } from "@/types/domain";
@@ -31,7 +31,6 @@ export interface AdminLocationSummary {
 }
 
 type MaybePromise<T> = T | Promise<T>;
-
 type ActionResult = {
   ok?: boolean;
   message?: string;
@@ -43,6 +42,7 @@ interface ClassManagerProps {
   periods: readonly AdminPeriodSummary[];
   locations: readonly AdminLocationSummary[];
   onCreate: (input: Record<string, unknown>) => MaybePromise<ActionResult>;
+  onUpdate: (id: string, input: Record<string, unknown>) => MaybePromise<ActionResult>;
   onDuplicate: (id: string) => MaybePromise<ActionResult>;
   onToggleActive: (id: string, active: boolean) => MaybePromise<ActionResult>;
 }
@@ -59,10 +59,9 @@ function sortClasses(classes: readonly AdminClassRecord[]) {
 }
 
 function resultMessage(result: ActionResult, fallback: string) {
-  if (result && typeof result === "object" && typeof result.message === "string") {
-    return result.message;
-  }
-  return fallback;
+  return result && typeof result === "object" && typeof result.message === "string"
+    ? result.message
+    : fallback;
 }
 
 export function ClassManager({
@@ -70,23 +69,45 @@ export function ClassManager({
   periods,
   locations,
   onCreate,
+  onUpdate,
   onDuplicate,
   onToggleActive,
 }: ClassManagerProps) {
-  const [showCreate, setShowCreate] = useState(false);
+  const [mode, setMode] = useState<"closed" | "create" | "edit">("closed");
+  const [editing, setEditing] = useState<AdminClassRecord | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const sortedClasses = useMemo(() => sortClasses(classes), [classes]);
   const periodById = useMemo(() => new Map(periods.map((period) => [period.id, period])), [periods]);
   const locationById = useMemo(() => new Map(locations.map((location) => [location.id, location])), [locations]);
-  const activeLocations = locations.filter((location) => location.is_active);
+  const activeLocations = locations.filter((location) => location.is_active || location.id === editing?.location_id);
+  const currentPeriodId = periods.find((period) => period.is_current)?.id ?? periods[0]?.id ?? "";
 
-  function handleCreate(event: FormEvent<HTMLFormElement>) {
+  function closeForm() {
+    setMode("closed");
+    setEditing(null);
+  }
+
+  function openCreate() {
+    if (mode === "create") closeForm();
+    else {
+      setEditing(null);
+      setMode("create");
+      setFeedback(null);
+    }
+  }
+
+  function openEdit(item: AdminClassRecord) {
+    setEditing(item);
+    setMode("edit");
+    setFeedback(null);
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-
     const payload = {
       period_id: String(data.get("period_id") ?? ""),
       location_id: String(data.get("location_id") ?? ""),
@@ -94,16 +115,27 @@ export function ClassManager({
       weekday: Number(data.get("weekday")),
       start_time: String(data.get("start_time") ?? ""),
       end_time: String(data.get("end_time") ?? ""),
-      is_active: true,
+      is_active: editing?.is_active ?? true,
     };
 
     startTransition(async () => {
-      const result = await onCreate(payload);
+      const result = editing
+        ? await onUpdate(editing.id, payload)
+        : await onCreate(payload);
       const succeeded = !result || !(typeof result === "object" && result.ok === false);
-      setFeedback(resultMessage(result, succeeded ? "Aula criada com sucesso." : "Não foi possível criar a aula."));
+      setFeedback(
+        resultMessage(
+          result,
+          succeeded
+            ? editing
+              ? "Aula atualizada com sucesso."
+              : "Aula criada com sucesso."
+            : "Não foi possível salvar a aula.",
+        ),
+      );
       if (succeeded) {
         form.reset();
-        setShowCreate(false);
+        closeForm();
       }
     });
   }
@@ -130,11 +162,11 @@ export function ClassManager({
         </div>
         <button
           type="button"
-          onClick={() => setShowCreate((value) => !value)}
+          onClick={openCreate}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[var(--brown-900)] px-5 py-2.5 text-sm font-bold text-[var(--warm-white)] transition hover:bg-[var(--brown-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brown-700)] focus-visible:ring-offset-2"
         >
-          {showCreate ? <X className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
-          {showCreate ? "Fechar formulário" : "Nova aula"}
+          {mode === "create" ? <X className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+          {mode === "create" ? "Fechar formulário" : "Nova aula"}
         </button>
       </div>
 
@@ -144,51 +176,63 @@ export function ClassManager({
         </div>
       ) : null}
 
-      {showCreate ? (
-        <form onSubmit={handleCreate} className="mt-6 rounded-[1.75rem] border border-[var(--sand-200)] bg-[var(--warm-white)] p-5 shadow-[0_16px_50px_rgba(58,36,24,0.05)] sm:p-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {mode !== "closed" ? (
+        <form onSubmit={handleSubmit} className="mt-6 rounded-[1.75rem] border border-[var(--sand-200)] bg-[var(--warm-white)] p-5 shadow-[0_16px_50px_rgba(58,36,24,0.05)] sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brown-700)]">
+                {mode === "edit" ? "Editar aula" : "Nova aula"}
+              </p>
+              {editing ? <p className="mt-1 text-sm text-[var(--brown-700)]">{editing.modality}</p> : null}
+            </div>
+            {mode === "edit" ? (
+              <button type="button" onClick={closeForm} aria-label="Fechar edição" className="grid size-10 place-items-center rounded-full hover:bg-[var(--offwhite-100)]">
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="grid gap-2 text-sm font-semibold text-[var(--brown-900)]">
               Modalidade
-              <input name="modality" required maxLength={120} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40" />
+              <input name="modality" required maxLength={120} defaultValue={editing?.modality ?? ""} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40" />
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-[var(--brown-900)]">
               Dia da semana
-              <select name="weekday" required defaultValue="1" className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40">
-                {Object.entries(WEEKDAY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
+              <select name="weekday" required defaultValue={String(editing?.weekday ?? 1)} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40">
+                {Object.entries(WEEKDAY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-[var(--brown-900)]">
               Período
-              <select name="period_id" required defaultValue={periods.find((period) => period.is_current)?.id ?? periods[0]?.id ?? ""} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40">
+              <select name="period_id" required defaultValue={editing?.period_id ?? currentPeriodId} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40">
                 {periods.map((period) => <option key={period.id} value={period.id}>{period.name}{period.is_current ? " — atual" : ""}</option>)}
               </select>
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-[var(--brown-900)]">
               Local
-              <select name="location_id" required defaultValue={activeLocations[0]?.id ?? ""} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40">
-                {activeLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+              <select name="location_id" required defaultValue={editing?.location_id ?? activeLocations[0]?.id ?? ""} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40">
+                {activeLocations.map((location) => <option key={location.id} value={location.id}>{location.name}{!location.is_active ? " — inativo" : ""}</option>)}
               </select>
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-[var(--brown-900)]">
               Horário inicial
-              <input type="time" name="start_time" required className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40" />
+              <input type="time" name="start_time" required defaultValue={editing ? formatTime(editing.start_time) : ""} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40" />
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-[var(--brown-900)]">
               Horário final
-              <input type="time" name="end_time" required className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40" />
+              <input type="time" name="end_time" required defaultValue={editing ? formatTime(editing.end_time) : ""} className="min-h-11 rounded-2xl border border-[var(--sand-200)] bg-white px-4 outline-none focus:border-[var(--brown-700)] focus:ring-2 focus:ring-[var(--beige-400)]/40" />
             </label>
           </div>
 
           <div className="mt-6 flex justify-end">
             <button disabled={isPending || !periods.length || !activeLocations.length} type="submit" className="min-h-11 rounded-full bg-[var(--brown-900)] px-6 py-2.5 text-sm font-bold text-[var(--warm-white)] transition hover:bg-[var(--brown-700)] disabled:cursor-not-allowed disabled:opacity-50">
-              {isPending ? "Salvando…" : "Salvar aula"}
+              {isPending ? "Salvando…" : mode === "edit" ? "Salvar alterações" : "Salvar aula"}
             </button>
           </div>
         </form>
@@ -199,14 +243,10 @@ export function ClassManager({
           const period = periodById.get(item.period_id);
           const location = locationById.get(item.location_id);
           const weekday = item.weekday as Weekday;
+          const accessibleEditLabel = `Editar ${item.modality} ${WEEKDAY_LABELS[weekday] ?? "dia"} ${formatTime(item.start_time)}`;
 
           return (
-            <article
-              key={item.id}
-              data-testid="admin-class-row"
-              data-class-id={item.id}
-              className="grid gap-5 rounded-[1.75rem] border border-[var(--sand-200)] bg-[var(--warm-white)] p-5 shadow-[0_12px_35px_rgba(58,36,24,0.04)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center sm:p-6"
-            >
+            <article key={item.id} data-testid="admin-class-row" data-class-id={item.id} className="grid gap-5 rounded-[1.75rem] border border-[var(--sand-200)] bg-[var(--warm-white)] p-5 shadow-[0_12px_35px_rgba(58,36,24,0.04)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center sm:p-6">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-[var(--offwhite-100)] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--brown-700)]">
@@ -217,26 +257,17 @@ export function ClassManager({
                   </span>
                 </div>
                 <h2 className="mt-3 font-serif text-3xl font-semibold text-[var(--brown-900)]">{item.modality}</h2>
-                <p className="mt-2 text-sm leading-6 text-[var(--brown-700)]">
-                  {period?.name ?? "Período não encontrado"} · {location?.name ?? "Local não encontrado"}
-                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--brown-700)]">{period?.name ?? "Período não encontrado"} · {location?.name ?? "Local não encontrado"}</p>
               </div>
 
               <div className="flex flex-wrap gap-2 md:justify-end">
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => runRowAction(() => onDuplicate(item.id), "Aula duplicada.")}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--sand-200)] px-4 py-2 text-sm font-bold text-[var(--brown-900)] transition hover:bg-[var(--offwhite-100)] disabled:opacity-50"
-                >
+                <button type="button" disabled={isPending} aria-label={accessibleEditLabel} onClick={() => openEdit(item)} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--sand-200)] px-4 py-2 text-sm font-bold text-[var(--brown-900)] transition hover:bg-[var(--offwhite-100)] disabled:opacity-50">
+                  <Edit3 className="size-4" aria-hidden="true" /> Editar
+                </button>
+                <button type="button" disabled={isPending} onClick={() => runRowAction(() => onDuplicate(item.id), "Aula duplicada.")} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--sand-200)] px-4 py-2 text-sm font-bold text-[var(--brown-900)] transition hover:bg-[var(--offwhite-100)] disabled:opacity-50">
                   <Copy className="size-4" aria-hidden="true" /> Duplicar
                 </button>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => runRowAction(() => onToggleActive(item.id, !item.is_active), item.is_active ? "Aula desativada." : "Aula ativada.")}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--sand-200)] px-4 py-2 text-sm font-bold text-[var(--brown-900)] transition hover:bg-[var(--offwhite-100)] disabled:opacity-50"
-                >
+                <button type="button" disabled={isPending} onClick={() => runRowAction(() => onToggleActive(item.id, !item.is_active), item.is_active ? "Aula desativada." : "Aula ativada.")} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--sand-200)] px-4 py-2 text-sm font-bold text-[var(--brown-900)] transition hover:bg-[var(--offwhite-100)] disabled:opacity-50">
                   <Power className="size-4" aria-hidden="true" /> {item.is_active ? "Desativar" : "Ativar"}
                 </button>
               </div>
