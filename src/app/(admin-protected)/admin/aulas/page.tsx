@@ -3,7 +3,7 @@ import { connection } from "next/server";
 
 import { ClassManager } from "@/components/admin/class-manager";
 import { PeriodManager } from "@/components/admin/period-manager";
-import { createClass, duplicateClass, setClassActive } from "@/lib/actions/admin/classes";
+import { createClass, duplicateClass, setClassActive, updateClass } from "@/lib/actions/admin/classes";
 import { createPeriod, duplicatePeriod, setCurrentPeriod } from "@/lib/actions/admin/periods";
 import { getAdminClassManagementData } from "@/lib/queries/admin/classes";
 
@@ -48,6 +48,7 @@ export default async function AdminClassesPage() {
           periods={periods}
           locations={locations}
           onCreate={createClass}
+          onUpdate={updateClass}
           onDuplicate={duplicateClass}
           onToggleActive={setClassActive}
         />
