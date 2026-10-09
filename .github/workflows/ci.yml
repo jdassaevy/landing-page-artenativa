@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   quality:
@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -22,6 +24,23 @@ jobs:
 
       - name: Enable Corepack
         run: corepack enable
+
+      - name: Refresh observability dependencies
+        if: github.event_name == 'pull_request'
+        run: pnpm add @vercel/analytics@latest @vercel/speed-insights@latest --save-exact --lockfile-only
+
+      - name: Commit dependency graph once
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --quiet -- package.json pnpm-lock.yaml; then
+            echo "Observability dependencies already current"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package.json pnpm-lock.yaml
+            git commit -m "chore: add vercel analytics and speed insights"
+            git push origin "HEAD:${{ github.head_ref }}"
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
