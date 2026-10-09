@@ -5,6 +5,12 @@ security invoker
 set search_path = ''
 as $$
 begin
+  if coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), '') <> 'admin' then
+    raise exception using
+      errcode = '42501',
+      message = 'row-level security: admin role required to switch current class period';
+  end if;
+
   if not exists (
     select 1
     from public.class_periods
