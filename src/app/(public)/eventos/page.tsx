@@ -7,6 +7,12 @@ import { getUpcomingEvents } from "@/lib/queries/events";
 export const metadata: Metadata = {
   title: "Eventos",
   description: "Confira os próximos eventos da Arte Nativa e fale diretamente pelo WhatsApp para reservas e ingressos.",
+  alternates: { canonical: "/eventos" },
+  openGraph: {
+    title: "Eventos | Arte Nativa",
+    description: "Confira os próximos eventos da Arte Nativa e fale diretamente pelo WhatsApp para reservas e ingressos.",
+    url: "/eventos",
+  },
 };
 
 export default async function EventsPage() {
