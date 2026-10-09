@@ -277,4 +277,5 @@ end;
 $$;
 
 revoke all on function public.duplicate_class_period(uuid, text, date, date) from public;
+revoke execute on function public.duplicate_class_period(uuid, text, date, date) from anon;
 grant execute on function public.duplicate_class_period(uuid, text, date, date) to authenticated;
