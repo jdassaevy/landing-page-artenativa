@@ -81,3 +81,129 @@ create table public.events (
 
 create index events_status_date_promotion_idx
   on public.events (status, event_date, promotion_starts_at, promotion_ends_at);
+
+-- Least-privilege Data API grants. RLS still decides which rows are visible/mutable.
+revoke all on public.locations, public.class_periods, public.classes, public.events from anon, authenticated;
+grant select on public.locations, public.class_periods, public.classes, public.events to anon;
+grant select, insert, update, delete on public.locations, public.class_periods, public.classes, public.events to authenticated;
+
+alter table public.locations enable row level security;
+alter table public.class_periods enable row level security;
+alter table public.classes enable row level security;
+alter table public.events enable row level security;
+
+-- Public content policies.
+create policy "public reads active locations"
+on public.locations for select
+to anon, authenticated
+using (is_active);
+
+create policy "public reads current class period"
+on public.class_periods for select
+to anon, authenticated
+using (is_current);
+
+create policy "public reads active current classes"
+on public.classes for select
+to anon, authenticated
+using (
+  is_active
+  and exists (
+    select 1 from public.class_periods p
+    where p.id = period_id and p.is_current
+  )
+  and exists (
+    select 1 from public.locations l
+    where l.id = location_id and l.is_active
+  )
+);
+
+create policy "public reads published events"
+on public.events for select
+to anon, authenticated
+using (status = 'published');
+
+-- Administrators are authorized only by immutable app_metadata, never user_metadata.
+create policy "admins read all locations"
+on public.locations for select
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins insert locations"
+on public.locations for insert
+to authenticated
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins update locations"
+on public.locations for update
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins delete locations"
+on public.locations for delete
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins read all class periods"
+on public.class_periods for select
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins insert class periods"
+on public.class_periods for insert
+to authenticated
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins update class periods"
+on public.class_periods for update
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins delete class periods"
+on public.class_periods for delete
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins read all classes"
+on public.classes for select
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins insert classes"
+on public.classes for insert
+to authenticated
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins update classes"
+on public.classes for update
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins delete classes"
+on public.classes for delete
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins read all events"
+on public.events for select
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins insert events"
+on public.events for insert
+to authenticated
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins update events"
+on public.events for update
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "admins delete events"
+on public.events for delete
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
