@@ -1,7 +1,7 @@
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { Reveal } from "@/components/motion/reveal";
+import { TrackedClassesLink } from "@/components/site/tracked-classes-link";
 
 export function Hero() {
   return (
@@ -19,9 +19,14 @@ export function Hero() {
             Descubra aulas, horários, locais e a programação da Arte Nativa em um espaço feito para aproximar a comunidade da dança e da tradição.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Link href="#aulas" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[var(--warm-white)] px-6 py-3 text-sm font-bold text-[var(--brown-900)] transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[var(--offwhite-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--warm-white)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brown-900)]">
-              Ver aulas e horários <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
+            <TrackedClassesLink
+              href="#aulas"
+              source="home"
+              showArrow
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[var(--warm-white)] px-6 py-3 text-sm font-bold text-[var(--brown-900)] transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[var(--offwhite-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--warm-white)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brown-900)]"
+            >
+              Ver aulas e horários
+            </TrackedClassesLink>
             <Link href="/eventos" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-[var(--warm-white)] transition-colors duration-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--warm-white)]">
               Próximos eventos
             </Link>
