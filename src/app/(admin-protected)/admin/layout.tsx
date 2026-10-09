@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+export const instant = false;
+
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/aulas", label: "Aulas", icon: Music2 },
