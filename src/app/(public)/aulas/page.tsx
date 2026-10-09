@@ -7,6 +7,12 @@ import { getCurrentClasses } from "@/lib/queries/classes";
 export const metadata: Metadata = {
   title: "Aulas e horários",
   description: "Confira as aulas e horários atuais da Arte Nativa, organizados de segunda a domingo.",
+  alternates: { canonical: "/aulas" },
+  openGraph: {
+    title: "Aulas e horários | Arte Nativa",
+    description: "Confira as aulas e horários atuais da Arte Nativa, organizados de segunda a domingo.",
+    url: "/aulas",
+  },
 };
 
 export default async function ClassesPage() {
