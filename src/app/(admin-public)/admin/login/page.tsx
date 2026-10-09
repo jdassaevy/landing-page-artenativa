@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
+import { Suspense } from "react";
 
 import { loginAdmin } from "@/lib/actions/admin/auth";
 
@@ -15,7 +16,7 @@ const errorMessages: Record<string, string> = {
   acesso: "Esta conta não possui acesso administrativo.",
 };
 
-export default async function AdminLoginPage({
+async function LoginMessage({
   searchParams,
 }: {
   searchParams: Promise<{ erro?: string }>;
@@ -23,6 +24,23 @@ export default async function AdminLoginPage({
   const params = await searchParams;
   const message = params.erro ? errorMessages[params.erro] : null;
 
+  if (!message) return null;
+
+  return (
+    <div
+      role="alert"
+      className="mt-6 rounded-2xl border border-[var(--beige-400)] bg-[var(--offwhite-100)] px-4 py-3 text-sm text-[var(--brown-900)]"
+    >
+      {message}
+    </div>
+  );
+}
+
+export default function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string }>;
+}) {
   return (
     <main className="min-h-screen bg-[var(--offwhite-100)] px-4 py-12 sm:px-6">
       <div className="mx-auto w-full max-w-md">
@@ -38,9 +56,16 @@ export default async function AdminLoginPage({
           <h1 className="mt-2 font-serif text-4xl font-semibold tracking-[-0.03em]">Entrar no painel</h1>
           <p className="mt-3 text-sm leading-7 text-[var(--brown-700)]">Acesso exclusivo para contas administrativas da Arte Nativa.</p>
 
-          {message ? (
-            <div role="alert" className="mt-6 rounded-2xl border border-[var(--beige-400)] bg-[var(--offwhite-100)] px-4 py-3 text-sm text-[var(--brown-900)]">{message}</div>
-          ) : null}
+          <Suspense
+            fallback={
+              <div
+                aria-hidden="true"
+                className="mt-6 h-12 animate-pulse rounded-2xl bg-[var(--offwhite-100)]"
+              />
+            }
+          >
+            <LoginMessage searchParams={searchParams} />
+          </Suspense>
 
           <form action={loginAdmin} className="mt-7 grid gap-5">
             <label className="grid gap-2 text-sm font-semibold">
