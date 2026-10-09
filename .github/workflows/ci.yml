@@ -48,12 +48,23 @@ jobs:
             echo "pnpm-lock.yaml already tracked"
             exit 0
           fi
-          encoded="$(base64 -w0 pnpm-lock.yaml)"
-          jq -n \
-            --arg message "chore: lock resolved dependencies" \
-            --arg content "$encoded" \
-            --arg branch "$HEAD_BRANCH" \
-            '{message: $message, content: $content, branch: $branch}' > /tmp/lockfile-payload.json
+          python - <<'PY'
+          import base64
+          import json
+          import os
+
+          with open("pnpm-lock.yaml", "rb") as source:
+              encoded = base64.b64encode(source.read()).decode("ascii")
+
+          payload = {
+              "message": "chore: lock resolved dependencies",
+              "content": encoded,
+              "branch": os.environ["HEAD_BRANCH"],
+          }
+
+          with open("/tmp/lockfile-payload.json", "w", encoding="utf-8") as target:
+              json.dump(payload, target)
+          PY
           curl --fail-with-body -L \
             -X PUT \
             -H "Accept: application/vnd.github+json" \
