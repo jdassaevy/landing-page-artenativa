@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarDays, LayoutDashboard, LogOut, MapPin, Music2 } from "lucide-react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { logoutAdmin } from "@/lib/actions/admin/auth";
 import { AdminAuthorizationError, requireAdmin } from "@/lib/auth/require-admin";
@@ -19,6 +20,8 @@ const nav = [
 ];
 
 export default async function ProtectedAdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
+
   let admin;
   try {
     admin = await requireAdmin();
