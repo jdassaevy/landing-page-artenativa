@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   quality:
@@ -37,3 +37,45 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  bootstrap-supabase:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Inspect CLI before use
+        run: |
+          supabase --version
+          supabase --help
+          supabase migration --help
+          supabase migration new --help
+
+      - name: Generate project config and migration shell
+        id: generate
+        run: |
+          if [ -f supabase/config.toml ]; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          supabase init
+          supabase migration new initial_content_schema
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit generated Supabase files
+        if: steps.generate.outputs.created == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/config.toml supabase/migrations
+          git commit -m "chore: initialize Supabase local project"
+          git push origin "HEAD:${{ github.head_ref }}"
