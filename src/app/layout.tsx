@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 
@@ -56,6 +58,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt-BR" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body>
         <MotionProvider>{children}</MotionProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
