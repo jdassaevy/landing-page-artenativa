@@ -89,7 +89,7 @@ describe("ImageUpload", () => {
       target: { files: [invalid] },
     });
 
-    expect(await screen.findByText(/jpeg, png ou webp/i)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/jpeg, png ou webp/i);
     expect(getCredentials).not.toHaveBeenCalled();
     expect(upload).not.toHaveBeenCalled();
   });
