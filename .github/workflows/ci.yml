@@ -9,7 +9,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   foundation:
@@ -26,6 +26,31 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Bootstrap Supabase files through CLI
+        if: github.event_name == 'push'
+        run: |
+          supabase --help >/dev/null
+          supabase init --help >/dev/null
+          supabase migration new --help >/dev/null
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+          if ! compgen -G "supabase/migrations/*_initial_content_schema.sql" >/dev/null; then
+            supabase migration new initial_content_schema
+          fi
+          if [ -n "$(git status --porcelain -- supabase)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add supabase
+            git commit -m "chore: initialize Supabase local project"
+            git push
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
