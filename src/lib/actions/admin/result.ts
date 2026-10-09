@@ -14,10 +14,15 @@ export interface AdminActionResult {
 export const entityIdSchema = z.string().uuid("Identificador inválido.");
 
 export function validationFailure(error: z.ZodError): AdminActionResult {
-  const flattened = error.flatten().fieldErrors;
-  const fieldErrors = Object.fromEntries(
-    Object.entries(flattened).filter((entry): entry is [string, string[]] => Boolean(entry[1]?.length)),
-  );
+  const fieldErrors: FieldErrors = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path[0];
+    if (typeof field !== "string") continue;
+
+    fieldErrors[field] ??= [];
+    fieldErrors[field].push(issue.message);
+  }
 
   return {
     ok: false,
