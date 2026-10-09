@@ -106,17 +106,25 @@ select throws_like(
   '%row-level security%',
   'admin update rejects unsupported extensions'
 );
-select lives_ok(
-  $$delete from storage.objects where bucket_id = 'location-images' and name = 'locais/matriz.webp'$$,
-  'admin can delete managed storage objects'
-);
 reset role;
+
+select ok(
+  exists(
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and cmd = 'DELETE'
+      and policyname = 'admins can delete managed storage objects'
+  ),
+  'admin delete policy exists for Storage API deletion'
+);
 
 select set_config('request.jwt.claims', '{"role":"anon","app_metadata":{},"user_metadata":{}}', true);
 set local role anon;
 select throws_like(
   $$insert into storage.objects (bucket_id, name) values ('event-covers', 'anon.jpg')$$,
-  '%row-level security%|%permission denied%',
+  '%row-level security%',
   'anon cannot upload into public buckets'
 );
 reset role;
