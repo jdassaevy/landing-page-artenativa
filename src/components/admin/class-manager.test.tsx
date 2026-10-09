@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ClassManager } from "./class-manager";
@@ -85,13 +85,17 @@ describe("ClassManager", () => {
     fireEvent.change(modality, { target: { value: "Danças Gaúchas Avançadas" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar alterações/i }));
 
-    expect(onUpdate).toHaveBeenCalledWith(
-      "mon-early",
-      expect.objectContaining({
-        modality: "Danças Gaúchas Avançadas",
-        weekday: 1,
-        is_active: true,
-      }),
-    );
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        "mon-early",
+        expect.objectContaining({
+          modality: "Danças Gaúchas Avançadas",
+          weekday: 1,
+          is_active: true,
+        }),
+      );
+    });
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Aula atualizada com sucesso.");
   });
 });
