@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LocationManager } from "./location-manager";
@@ -50,8 +50,15 @@ describe("LocationManager", () => {
     expect(await screen.findByText("Este local está sendo usado por 2 aulas ativas.")).toBeInTheDocument();
     expect(onToggleActive).toHaveBeenCalledWith("loc-1", false, false);
 
-    fireEvent.click(screen.getByRole("button", { name: /confirmar desativação/i }));
+    const confirmButton = await waitFor(() => {
+      const button = screen.getByRole("button", { name: /confirmar desativação/i });
+      expect(button).toBeEnabled();
+      return button;
+    });
+    fireEvent.click(confirmButton);
 
-    expect(onToggleActive).toHaveBeenLastCalledWith("loc-1", false, true);
+    await waitFor(() => {
+      expect(onToggleActive).toHaveBeenLastCalledWith("loc-1", false, true);
+    });
   });
 });
