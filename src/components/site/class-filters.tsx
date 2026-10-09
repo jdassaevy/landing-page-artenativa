@@ -4,7 +4,7 @@ import { RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ClassCard } from "@/components/site/class-card";
-import type { PublicClass, Weekday } from "@/types/domain";
+import type { PublicClass } from "@/types/domain";
 import { WEEKDAY_LABELS } from "@/types/domain";
 
 interface ClassFiltersProps {
