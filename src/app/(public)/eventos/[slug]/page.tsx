@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import { LazyMap } from "@/components/site/lazy-map";
 import { WhatsAppCta } from "@/components/site/whatsapp-cta";
 import { getEventBySlug } from "@/lib/queries/events";
+import { buildPublicStorageUrl } from "@/lib/seo";
 
 interface EventPageProps {
   params: Promise<{ slug: string }>;
@@ -27,15 +28,30 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   const { slug } = await params;
   const event = await getEventBySlug(slug);
 
-  if (!event) return { title: "Evento não encontrado" };
+  if (!event) return { title: "Evento não encontrado", robots: { index: false, follow: false } };
+
+  const description = event.description ?? `Confira os detalhes de ${event.title} na Arte Nativa.`;
+  const canonical = `/eventos/${event.slug}`;
+  const coverUrl = buildPublicStorageUrl("event-covers", event.cover_path);
 
   return {
     title: event.title,
-    description: event.description ?? `Confira os detalhes de ${event.title} na Arte Nativa.`,
+    description,
+    alternates: {
+      canonical,
+    },
     openGraph: {
       title: event.title,
-      description: event.description ?? `Confira os detalhes de ${event.title} na Arte Nativa.`,
+      description,
       type: "article",
+      url: canonical,
+      images: coverUrl ? [{ url: coverUrl, alt: `Capa de ${event.title}` }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+      images: coverUrl ? [coverUrl] : undefined,
     },
   };
 }
