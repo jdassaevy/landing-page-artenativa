@@ -47,6 +47,8 @@ export default async function EventDetailPage({ params }: EventPageProps) {
 
   if (!event) notFound();
 
+  const venueLabel = event.venue_name || event.title;
+
   return (
     <main id="conteudo">
       <section className="border-b border-[var(--sand-200)] bg-[var(--brown-900)] text-[var(--warm-white)]">
@@ -57,7 +59,7 @@ export default async function EventDetailPage({ params }: EventPageProps) {
           <h1 className="mt-5 max-w-5xl font-serif text-6xl font-semibold leading-[0.88] tracking-[-0.045em] sm:text-7xl lg:text-8xl">{event.title}</h1>
           <div className="mt-7 flex items-start gap-2 text-sm leading-7 text-[var(--offwhite-100)]/85">
             <MapPin className="mt-1 size-4 shrink-0" aria-hidden="true" />
-            <p><strong className="text-[var(--warm-white)]">{event.venue_name}</strong><br />{event.venue_address}, {event.venue_city} – {event.venue_state}</p>
+            <p><strong className="text-[var(--warm-white)]">{venueLabel}</strong><br />{event.venue_address}, {event.venue_city} – {event.venue_state}</p>
           </div>
         </div>
       </section>
@@ -82,7 +84,7 @@ export default async function EventDetailPage({ params }: EventPageProps) {
             latitude: event.latitude,
             longitude: event.longitude,
           }}
-          title={event.venue_name}
+          title={venueLabel}
         />
       </section>
     </main>
