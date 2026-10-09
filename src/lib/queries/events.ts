@@ -46,6 +46,25 @@ export async function getEventBySlug(slug: string): Promise<SiteEvent | null> {
   return (data as SiteEvent | null) ?? null;
 }
 
+export async function getPublishedEventSlugs(): Promise<string[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(CACHE_TAGS.events);
+
+  const supabase = createPublicSupabaseClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("slug")
+    .eq("status", "published")
+    .order("event_date", { ascending: false });
+
+  if (error) {
+    throw new Error(`Não foi possível carregar os slugs de eventos: ${error.message}`);
+  }
+
+  return (data ?? []).map((event) => event.slug);
+}
+
 export async function getPopupEvent(): Promise<SiteEvent | null> {
   "use cache";
   cacheLife("minutes");
