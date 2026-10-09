@@ -266,3 +266,47 @@ $$;
 
 revoke all on function public.duplicate_class_period(uuid, text, date, date) from public, anon;
 grant execute on function public.duplicate_class_period(uuid, text, date, date) to authenticated;
+
+-- Public image buckets. Public access serves files; management stays behind RLS.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('event-covers', 'event-covers', true, 8388608, array['image/jpeg', 'image/png', 'image/webp']),
+  ('location-images', 'location-images', true, 8388608, array['image/jpeg', 'image/png', 'image/webp']);
+
+create policy "Arte Nativa admins select images"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id in ('event-covers', 'location-images')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+);
+
+create policy "Arte Nativa admins insert images"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id in ('event-covers', 'location-images')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  and lower(storage.extension(name)) in ('jpg', 'jpeg', 'png', 'webp')
+);
+
+create policy "Arte Nativa admins update images"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id in ('event-covers', 'location-images')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+)
+with check (
+  bucket_id in ('event-covers', 'location-images')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  and lower(storage.extension(name)) in ('jpg', 'jpeg', 'png', 'webp')
+);
+
+create policy "Arte Nativa admins delete images"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id in ('event-covers', 'location-images')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+);
