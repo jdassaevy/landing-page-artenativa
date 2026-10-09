@@ -28,9 +28,18 @@ export async function getCurrentClasses(): Promise<PublicClass[]> {
   if (error) throw new Error(`Não foi possível carregar as aulas: ${error.message}`);
 
   const rows = (data ?? []) as unknown as ClassQueryRow[];
-  const publicRows = rows
+  const publicRows: PublicClass[] = rows
     .filter((row) => row.period?.is_current)
-    .map(({ period: _period, ...danceClass }) => danceClass);
+    .map((row) => ({
+      id: row.id,
+      modality: row.modality,
+      weekday: row.weekday,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      location_id: row.location_id,
+      period_id: row.period_id,
+      location: row.location,
+    }));
 
   return sortClasses(publicRows);
 }

@@ -1,6 +1,12 @@
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  "use cache";
+  cacheLife("days");
+
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer id="contato" className="border-t border-[var(--sand-200)] bg-[var(--brown-900)] text-[var(--offwhite-100)]">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.2fr_0.8fr] lg:px-8">
@@ -29,7 +35,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-[var(--beige-400)]">
-        © {new Date().getFullYear()} Arte Nativa. Todos os direitos reservados.
+        © {currentYear} Arte Nativa. Todos os direitos reservados.
       </div>
     </footer>
   );
