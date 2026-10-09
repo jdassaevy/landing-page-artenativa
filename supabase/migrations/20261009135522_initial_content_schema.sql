@@ -123,3 +123,91 @@ for each row execute function public.set_updated_at();
 create trigger events_set_updated_at
 before update on public.events
 for each row execute function public.set_updated_at();
+
+alter table public.locations enable row level security;
+alter table public.class_periods enable row level security;
+alter table public.classes enable row level security;
+alter table public.events enable row level security;
+
+revoke all privileges on table public.locations from anon, authenticated;
+revoke all privileges on table public.class_periods from anon, authenticated;
+revoke all privileges on table public.classes from anon, authenticated;
+revoke all privileges on table public.events from anon, authenticated;
+
+grant usage on schema public to anon, authenticated;
+
+grant select on table public.locations to anon, authenticated;
+grant select on table public.class_periods to anon, authenticated;
+grant select on table public.classes to anon, authenticated;
+grant select on table public.events to anon, authenticated;
+
+grant insert, update, delete on table public.locations to authenticated;
+grant insert, update, delete on table public.class_periods to authenticated;
+grant insert, update, delete on table public.classes to authenticated;
+grant insert, update, delete on table public.events to authenticated;
+
+create policy "public can read active locations"
+on public.locations
+for select
+to anon, authenticated
+using (is_active);
+
+create policy "admins can manage locations"
+on public.locations
+for all
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "public can read current class period"
+on public.class_periods
+for select
+to anon, authenticated
+using (is_current);
+
+create policy "admins can manage class periods"
+on public.class_periods
+for all
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "public can read active current classes"
+on public.classes
+for select
+to anon, authenticated
+using (
+  is_active
+  and exists (
+    select 1
+    from public.class_periods period
+    where period.id = classes.period_id
+      and period.is_current
+  )
+  and exists (
+    select 1
+    from public.locations location
+    where location.id = classes.location_id
+      and location.is_active
+  )
+);
+
+create policy "admins can manage classes"
+on public.classes
+for all
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create policy "public can read published events"
+on public.events
+for select
+to anon, authenticated
+using (status = 'published');
+
+create policy "admins can manage events"
+on public.events
+for all
+to authenticated
+using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
