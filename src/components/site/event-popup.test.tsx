@@ -69,10 +69,37 @@ describe("EventPopup", () => {
     expect(screen.getByRole("dialog", { name: /baile arte nativa/i })).toBeInTheDocument();
   });
 
-  it("closes from the visible close button", () => {
+  it("traps keyboard focus inside the dialog", () => {
+    render(<EventPopup event={baseEvent} now={() => 1_000_000} />);
+
+    const closeButton = screen.getByRole("button", { name: /fechar destaque/i });
+    const lastButton = screen.getByRole("button", { name: /agora não/i });
+
+    expect(closeButton).toHaveFocus();
+
+    lastButton.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(closeButton).toHaveFocus();
+
+    closeButton.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(lastButton).toHaveFocus();
+  });
+
+  it("restores focus after closing from the visible close button", () => {
+    const trigger = document.createElement("button");
+    trigger.textContent = "Abrir agenda";
+    document.body.appendChild(trigger);
+    trigger.focus();
+
     render(<EventPopup event={baseEvent} now={() => 1_000_000} />);
 
     fireEvent.click(screen.getByRole("button", { name: /fechar destaque/i }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    return Promise.resolve().then(() => {
+      expect(trigger).toHaveFocus();
+      trigger.remove();
+    });
   });
 });
