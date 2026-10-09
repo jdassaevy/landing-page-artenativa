@@ -7,6 +7,12 @@ import { getActiveLocations } from "@/lib/queries/locations";
 export const metadata: Metadata = {
   title: "Locais",
   description: "Veja os locais ativos da Arte Nativa, com endereço e rota para chegar com facilidade.",
+  alternates: { canonical: "/locais" },
+  openGraph: {
+    title: "Locais | Arte Nativa",
+    description: "Veja os locais ativos da Arte Nativa, com endereço e rota para chegar com facilidade.",
+    url: "/locais",
+  },
 };
 
 export default async function LocationsPage() {
