@@ -19,9 +19,18 @@ interface EventPopupProps {
 }
 
 const subscribeToNoopStore = () => () => undefined;
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 export function EventPopup({ event, now = Date.now }: EventPopupProps) {
   const [dismissedEventId, setDismissedEventId] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -60,7 +69,41 @@ export function EventPopup({ event, now = Date.now }: EventPopupProps) {
     if (!open) return;
 
     const onKeyDown = (keyboardEvent: KeyboardEvent) => {
-      if (keyboardEvent.key === "Escape") close();
+      if (keyboardEvent.key === "Escape") {
+        close();
+        return;
+      }
+
+      if (keyboardEvent.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => !element.hasAttribute("disabled"));
+
+      if (!focusable.length) {
+        keyboardEvent.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const activeElement = document.activeElement;
+
+      if (keyboardEvent.shiftKey) {
+        if (activeElement === first || !dialog.contains(activeElement)) {
+          keyboardEvent.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+
+      if (activeElement === last || !dialog.contains(activeElement)) {
+        keyboardEvent.preventDefault();
+        first.focus();
+      }
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -87,6 +130,7 @@ export function EventPopup({ event, now = Date.now }: EventPopupProps) {
       }}
     >
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`event-popup-title-${event.id}`}
