@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 import { ClassManager } from "@/components/admin/class-manager";
 import { createClass, duplicateClass, setClassActive } from "@/lib/actions/admin/classes";
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminClassesPage() {
+  await connection();
   const { classes, periods, locations } = await getAdminClassManagementData();
 
   return (
