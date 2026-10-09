@@ -211,3 +211,70 @@ for all
 to authenticated
 using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
 with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create or replace function public.duplicate_class_period(
+  source_period_id uuid,
+  new_name text,
+  new_starts_at date,
+  new_ends_at date
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  new_period_id uuid;
+begin
+  if btrim(new_name) = '' then
+    raise exception using
+      errcode = '22023',
+      message = 'new_name must not be blank';
+  end if;
+
+  if new_ends_at < new_starts_at then
+    raise exception using
+      errcode = '22023',
+      message = 'new_ends_at must be on or after new_starts_at';
+  end if;
+
+  if not exists (
+    select 1
+    from public.class_periods
+    where id = source_period_id
+  ) then
+    raise exception using
+      errcode = 'P0002',
+      message = 'source class period was not found';
+  end if;
+
+  insert into public.class_periods (name, starts_at, ends_at, is_current)
+  values (new_name, new_starts_at, new_ends_at, false)
+  returning id into new_period_id;
+
+  insert into public.classes (
+    period_id,
+    location_id,
+    modality,
+    weekday,
+    start_time,
+    end_time,
+    is_active
+  )
+  select
+    new_period_id,
+    source.location_id,
+    source.modality,
+    source.weekday,
+    source.start_time,
+    source.end_time,
+    source.is_active
+  from public.classes source
+  where source.period_id = source_period_id;
+
+  return new_period_id;
+end;
+$$;
+
+revoke all on function public.duplicate_class_period(uuid, text, date, date) from public;
+grant execute on function public.duplicate_class_period(uuid, text, date, date) to authenticated;
