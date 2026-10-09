@@ -17,18 +17,24 @@ const classes = [
   { id: "mon-early", period_id: "period-1", location_id: "loc-1", modality: "Danças Gaúchas", weekday: 1, start_time: "18:00:00", end_time: "19:00:00", is_active: true },
 ];
 
+function renderManager(overrides: Partial<React.ComponentProps<typeof ClassManager>> = {}) {
+  return render(
+    <ClassManager
+      classes={classes}
+      periods={periods}
+      locations={locations}
+      onCreate={vi.fn()}
+      onUpdate={vi.fn()}
+      onDuplicate={vi.fn()}
+      onToggleActive={vi.fn()}
+      {...overrides}
+    />,
+  );
+}
+
 describe("ClassManager", () => {
   it("orders classes Monday to Sunday and by time", () => {
-    render(
-      <ClassManager
-        classes={classes}
-        periods={periods}
-        locations={locations}
-        onCreate={vi.fn()}
-        onDuplicate={vi.fn()}
-        onToggleActive={vi.fn()}
-      />,
-    );
+    renderManager();
 
     expect(screen.getAllByTestId("admin-class-row").map((node) => node.getAttribute("data-class-id"))).toEqual([
       "mon-early",
@@ -38,16 +44,7 @@ describe("ClassManager", () => {
   });
 
   it("shows modality, period, status and no professor or level fields", () => {
-    render(
-      <ClassManager
-        classes={classes}
-        periods={periods}
-        locations={locations}
-        onCreate={vi.fn()}
-        onDuplicate={vi.fn()}
-        onToggleActive={vi.fn()}
-      />,
-    );
+    renderManager();
 
     const first = screen.getAllByTestId("admin-class-row")[0];
     expect(within(first).getByText("Danças Gaúchas")).toBeInTheDocument();
@@ -58,16 +55,7 @@ describe("ClassManager", () => {
   });
 
   it("opens a create form with only the approved class fields", () => {
-    render(
-      <ClassManager
-        classes={classes}
-        periods={periods}
-        locations={locations}
-        onCreate={vi.fn()}
-        onDuplicate={vi.fn()}
-        onToggleActive={vi.fn()}
-      />,
-    );
+    renderManager();
 
     fireEvent.click(screen.getByRole("button", { name: /nova aula/i }));
 
@@ -79,5 +67,31 @@ describe("ClassManager", () => {
     expect(screen.getByLabelText(/local/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/professor/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/nível/i)).not.toBeInTheDocument();
+  });
+
+  it("edits an existing class without adding professor or level fields", async () => {
+    const onUpdate = vi.fn().mockResolvedValue({ ok: true, message: "Aula atualizada com sucesso." });
+    renderManager({ onUpdate });
+
+    fireEvent.click(screen.getByRole("button", { name: /editar danças gaúchas segunda-feira 18:00/i }));
+
+    const modality = screen.getByLabelText(/modalidade/i);
+    expect(modality).toHaveValue("Danças Gaúchas");
+    expect(screen.getByLabelText(/dia da semana/i)).toHaveValue("1");
+    expect(screen.getByLabelText(/horário inicial/i)).toHaveValue("18:00");
+    expect(screen.queryByLabelText(/professor/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/nível/i)).not.toBeInTheDocument();
+
+    fireEvent.change(modality, { target: { value: "Danças Gaúchas Avançadas" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar alterações/i }));
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      "mon-early",
+      expect.objectContaining({
+        modality: "Danças Gaúchas Avançadas",
+        weekday: 1,
+        is_active: true,
+      }),
+    );
   });
 });
