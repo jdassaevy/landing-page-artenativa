@@ -16,6 +16,7 @@ insert into public.classes (id, period_id, location_id, modality, weekday, start
   ('00000000-0000-0000-0000-000000002302', '00000000-0000-0000-0000-000000002201', '00000000-0000-0000-0000-000000002101', 'Avançado', 4, '20:00', '21:00', true);
 
 create temporary table duplicate_result (id uuid not null);
+grant select, insert on duplicate_result to authenticated;
 
 set local role authenticated;
 set local "request.jwt.claims" = '{"role":"authenticated","sub":"00000000-0000-0000-0000-000000009102","app_metadata":{"role":"admin"}}';
