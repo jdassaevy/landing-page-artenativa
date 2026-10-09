@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const motionConfigSpy = vi.fn(({ children }: { children: React.ReactNode }) => children);
+const { motionConfigSpy } = vi.hoisted(() => ({
+  motionConfigSpy: vi.fn(({ children }: { children: React.ReactNode }) => children),
+}));
 
 vi.mock("motion/react", () => ({
   MotionConfig: motionConfigSpy,
