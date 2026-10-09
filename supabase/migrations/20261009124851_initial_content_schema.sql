@@ -207,3 +207,62 @@ create policy "admins delete events"
 on public.events for delete
 to authenticated
 using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+create or replace function public.duplicate_class_period(
+  source_period_id uuid,
+  new_name text,
+  new_starts_at date,
+  new_ends_at date
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  destination_id uuid;
+begin
+  if (select auth.jwt() -> 'app_metadata' ->> 'role') is distinct from 'admin' then
+    raise exception 'administrator access required' using errcode = '42501';
+  end if;
+
+  if new_ends_at < new_starts_at then
+    raise exception 'end date must not precede start date' using errcode = '22023';
+  end if;
+
+  if not exists (
+    select 1 from public.class_periods where id = source_period_id
+  ) then
+    raise exception 'source period not found' using errcode = 'P0002';
+  end if;
+
+  insert into public.class_periods (name, starts_at, ends_at, is_current)
+  values (new_name, new_starts_at, new_ends_at, false)
+  returning id into destination_id;
+
+  insert into public.classes (
+    period_id,
+    location_id,
+    modality,
+    weekday,
+    start_time,
+    end_time,
+    is_active
+  )
+  select
+    destination_id,
+    location_id,
+    modality,
+    weekday,
+    start_time,
+    end_time,
+    is_active
+  from public.classes
+  where period_id = source_period_id;
+
+  return destination_id;
+end;
+$$;
+
+revoke all on function public.duplicate_class_period(uuid, text, date, date) from public, anon;
+grant execute on function public.duplicate_class_period(uuid, text, date, date) to authenticated;
