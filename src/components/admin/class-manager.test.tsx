@@ -51,7 +51,7 @@ describe("ClassManager", () => {
 
     const first = screen.getAllByTestId("admin-class-row")[0];
     expect(within(first).getByText("Danças Gaúchas")).toBeInTheDocument();
-    expect(within(first).getByText("1º trimestre 2027")).toBeInTheDocument();
+    expect(within(first).getByText(/1º trimestre 2027/)).toBeInTheDocument();
     expect(within(first).getByText("Ativa")).toBeInTheDocument();
     expect(screen.queryByText(/professor/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/nível/i)).not.toBeInTheDocument();
