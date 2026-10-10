@@ -131,7 +131,7 @@ export default async function globalSetup() {
   const users = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (users.error) throw new Error(`list E2E users: ${users.error.message}`);
 
-  const fixtureEmails = new Set([
+  const fixtureEmails = new Set<string>([
     E2E_FIXTURES.admin.email,
     E2E_FIXTURES.member.email,
   ]);
