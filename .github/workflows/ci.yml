@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Motion reduced-motion test
+        run: pnpm vitest run src/components/motion/motion-provider.test.tsx
+
+      - name: Test suite
+        run: pnpm vitest run
+
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Inspect Supabase CLI
+        run: |
+          supabase --version
+          supabase start --help
+          supabase status --help
+
+      - name: Start isolated Supabase stack
+        run: supabase start
+
+      - name: Export local application environment
+        shell: bash
+        run: |
+          supabase status -o env > /tmp/supabase-status.env
+          set -a
+          source /tmp/supabase-status.env
+          set +a
+
+          PUBLIC_KEY="${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
+          ADMIN_KEY="${SECRET_KEY:-${SERVICE_ROLE_KEY:-}}"
+
+          if [ -z "${API_URL:-}" ] || [ -z "$PUBLIC_KEY" ] || [ -z "$ADMIN_KEY" ]; then
+            echo "Supabase local environment did not expose the required API keys." >&2
+            exit 1
+          fi
+
+          {
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$PUBLIC_KEY"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$ADMIN_KEY"
+            printf 'NEXT_PUBLIC_SITE_URL=%s\n' 'http://127.0.0.1:3000'
+            printf 'NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY=%s\n' 'e2e-google-maps-key'
+            printf 'PLAYWRIGHT_BASE_URL=%s\n' 'http://127.0.0.1:3000'
+          } >> "$GITHUB_ENV"
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright E2E and accessibility suite
+        run: pnpm test:e2e

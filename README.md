@@ -1,5 +1,25 @@
-# Arte Nativa — Site e Painel Administrativo
+# Arte Nativa
 
-Reconstrução oficial do site da Arte Nativa, com site público moderno e painel administrativo para gestão de aulas, locais e eventos.
+Novo site institucional e painel administrativo da Arte Nativa.
 
-A documentação aprovada do projeto fica em `docs/superpowers/`.
+## Stack
+
+Next.js 16, React 19, TypeScript, Tailwind CSS v4, Motion e Supabase.
+
+## Desenvolvimento
+
+```bash
+corepack enable
+pnpm install
+pnpm dev
+```
+
+## Qualidade
+
+```bash
+pnpm lint
+pnpm vitest run
+pnpm build
+```
+
+A arquitetura e o plano de implementação ficam em `docs/superpowers/`.
