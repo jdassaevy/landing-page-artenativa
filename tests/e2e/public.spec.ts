@@ -128,7 +128,7 @@ test.describe("experiência pública mobile", () => {
     await page.goto("/");
     await dismissFeaturedPopup(page);
 
-    await page.getByText("Abrir menu", { exact: true }).click();
+    await page.getByRole("button", { name: "Abrir menu" }).click();
     const mobileNavigation = page.getByRole("navigation", { name: "Navegação móvel" });
     await expect(mobileNavigation).toBeVisible();
     await mobileNavigation.getByRole("link", { name: "Aulas", exact: true }).click();
