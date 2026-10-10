@@ -12,6 +12,8 @@ interface EventPageProps {
   params: Promise<{ slug: string }>;
 }
 
+export const instant = false;
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
