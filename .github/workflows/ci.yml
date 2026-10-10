@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   quality:
@@ -37,39 +37,3 @@ jobs:
 
       - name: Build
         run: pnpm build
-
-  bootstrap-playwright:
-    if: github.event_name == 'pull_request'
-    needs: quality
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Install current dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Add E2E dependencies through pnpm
-        run: pnpm add -D @playwright/test @axe-core/playwright
-
-      - name: Commit resolved E2E dependency graph once
-        run: |
-          if git diff --quiet -- package.json pnpm-lock.yaml; then
-            echo "E2E dependencies already current"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json pnpm-lock.yaml
-          git commit -m "chore: add Playwright E2E test harness"
-          git push origin "HEAD:${{ github.head_ref }}"
