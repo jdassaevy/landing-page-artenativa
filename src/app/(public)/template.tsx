@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { SiteAnalyticsObserver } from "@/components/site/site-analytics-observer";
 
 export default function PublicTemplate({
@@ -5,7 +7,9 @@ export default function PublicTemplate({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <>
-      <SiteAnalyticsObserver />
+      <Suspense fallback={null}>
+        <SiteAnalyticsObserver />
+      </Suspense>
       {children}
     </>
   );
