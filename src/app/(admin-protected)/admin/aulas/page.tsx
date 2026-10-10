@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   title: "Aulas",
 };
 
+export const instant = false;
+
 export default async function AdminClassesPage() {
   await connection();
   const { classes, periods, locations } = await getAdminClassManagementData();
