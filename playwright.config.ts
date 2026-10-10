@@ -25,7 +25,7 @@ export default defineConfig({
   globalSetup: "./tests/e2e/global-setup.ts",
   webServer: {
     command: "pnpm dev",
-    url: baseURL,
+    url: `${baseURL}/admin/login`,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
   },
