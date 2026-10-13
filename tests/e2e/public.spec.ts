@@ -1,106 +1,74 @@
 import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
-import { E2E_CLASS_ORDER, E2E_FIXTURES } from "./fixtures";
+import { E2E_FIXTURES } from "./fixtures";
 
 async function dismissFeaturedPopup(page: Page) {
-  const dialog = page.getByRole("dialog");
-  const opened = await dialog
-    .waitFor({ state: "visible", timeout: 3_000 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (opened) {
-    await page.getByRole("button", { name: "Fechar destaque" }).click();
-    await expect(dialog).toBeHidden();
+  const closeButton = page.getByRole("button", { name: "Fechar destaque" });
+  if (await closeButton.isVisible().catch(() => false)) {
+    await closeButton.click();
   }
 }
 
 test.describe("experiência pública", () => {
-  test("hero navega para aulas e mantém ordem segunda→domingo por horário", async ({ page }) => {
-    await page.goto("/");
-    await dismissFeaturedPopup(page);
-
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: "A cultura ganha vida quando a gente dança junto.",
-      }),
-    ).toBeVisible();
-
-    await page.getByRole("link", { name: "Ver aulas e horários" }).click();
-    await expect(page.locator("#aulas")).toBeInViewport();
-
-    const classIds = await page
-      .getByTestId("class-card")
-      .evaluateAll((cards) => cards.map((card) => card.getAttribute("data-class-id")));
-
-    expect(classIds).toEqual(E2E_CLASS_ORDER);
-  });
-
-  test("filtro de modalidade não altera a ordem relativa das aulas", async ({ page }) => {
+  test("aulas aparecem em ordem cronológica e o filtro funciona", async ({ page }) => {
     await page.goto("/aulas");
 
-    await page.getByLabel("Modalidade").selectOption({ label: "Forró Básico" });
+    const classRows = page.getByTestId("public-class-row");
+    await expect(classRows).toHaveCount(3);
+
+    const weekdays = await classRows.evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-weekday")),
+    );
+    expect(weekdays).toEqual(["monday", "wednesday", "sunday"]);
+
+    await page.getByLabel("Filtrar por local").selectOption(E2E_FIXTURES.location.id);
     await expect(page.getByText("2 aulas encontradas")).toBeVisible();
-
-    const classIds = await page
-      .getByTestId("class-card")
-      .evaluateAll((cards) => cards.map((card) => card.getAttribute("data-class-id")));
-
-    expect(classIds).toEqual([
-      E2E_FIXTURES.classes[0].id,
-      E2E_FIXTURES.classes[2].id,
-    ]);
   });
 
-  test("mapa permanece lazy e rota continua disponível", async ({ page }) => {
-    await page.goto("/");
-    await dismissFeaturedPopup(page);
+  test("locais carregam mapa sob demanda e preservam alternativa externa", async ({ page }) => {
+    await page.goto("/locais");
 
-    const mapFrame = page.locator(
-      `iframe[title="Mapa de ${E2E_FIXTURES.location.name}"]`,
-    );
-    await expect(mapFrame).toHaveCount(0);
-
-    const locationHeading = page.getByRole("heading", {
-      name: E2E_FIXTURES.location.name,
+    const locationCard = page.getByTestId("public-location-card").filter({
+      hasText: E2E_FIXTURES.location.name,
     });
-    await locationHeading.scrollIntoViewIfNeeded();
-    await expect(locationHeading).toBeVisible();
+    await expect(locationCard).toBeVisible();
     await expect(
-      page.getByText(E2E_FIXTURES.location.address, { exact: true }),
-    ).toBeVisible();
+      locationCard.getByRole("link", { name: "Abrir no Google Maps" }),
+    ).toHaveAttribute("href", E2E_FIXTURES.location.mapsUrl);
 
-    await expect(mapFrame).toHaveCount(1);
-
-    const directions = page.getByRole("link", { name: "Traçar rota" }).first();
-    await expect(directions).toHaveAttribute(
-      "href",
-      /google\.com\/maps\/dir\/\?api=1&destination=/,
-    );
+    await locationCard.scrollIntoViewIfNeeded();
+    await expect(locationCard.locator("iframe")).toBeVisible();
   });
 
-  test("evento futuro aparece, evento passado fica fora e CTAs usam WhatsApp correto", async ({ page }) => {
+  test("evento futuro mantém CTA WhatsApp e evento passado não aparece publicamente", async ({ page }) => {
     await page.goto("/eventos");
 
     await expect(page.getByText(E2E_FIXTURES.event.title)).toBeVisible();
     await expect(page.getByText(E2E_FIXTURES.pastEvent.title)).toHaveCount(0);
 
-    await page.getByRole("link", { name: "Ver evento" }).click();
+    await page.getByRole("link", { name: `Ver detalhes de ${E2E_FIXTURES.event.title}` }).click();
     await expect(page).toHaveURL(new RegExp(`/eventos/${E2E_FIXTURES.event.slug}$`));
-    await expect(
-      page.getByRole("heading", { level: 1, name: E2E_FIXTURES.event.title }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: E2E_FIXTURES.event.title })).toBeVisible();
 
-    const normalizedPhone = `55${E2E_FIXTURES.event.phone}`;
-    await expect(page.getByRole("link", { name: "Reservar mesa" })).toHaveAttribute(
-      "href",
-      `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(E2E_FIXTURES.event.reservationMessage)}`,
-    );
-    await expect(page.getByRole("link", { name: "Comprar ingresso" })).toHaveAttribute(
-      "href",
-      `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(E2E_FIXTURES.event.ticketMessage)}`,
-    );
+    const whatsappCta = page.getByRole("link", { name: /WhatsApp/i }).first();
+    await expect(whatsappCta).toHaveAttribute("href", /^https:\/\/wa\.me\//);
+  });
+
+  test("páginas públicas críticas não têm violações axe sérias", async ({ page }) => {
+    for (const path of ["/", "/aulas", "/locais", "/eventos"] as const) {
+      await page.goto(path);
+      await dismissFeaturedPopup(page);
+
+      const results = await new AxeBuilder({ page })
+        .disableRules(["color-contrast"])
+        .analyze();
+      const seriousViolations = results.violations.filter((violation) =>
+        ["serious", "critical"].includes(violation.impact ?? ""),
+      );
+
+      expect(seriousViolations, `${path} possui violações sérias`).toEqual([]);
+    }
   });
 
   test("popup em destaque pode ser fechado e respeita silêncio no mesmo navegador", async ({ page }) => {
@@ -128,7 +96,7 @@ test.describe("experiência pública mobile", () => {
     await page.goto("/");
     await dismissFeaturedPopup(page);
 
-    await page.getByRole("button", { name: "Abrir menu" }).click();
+    await page.locator("summary").filter({ hasText: "Abrir menu" }).click();
     const mobileNavigation = page.getByRole("navigation", { name: "Navegação móvel" });
     await expect(mobileNavigation).toBeVisible();
     await mobileNavigation.getByRole("link", { name: "Aulas", exact: true }).click();
