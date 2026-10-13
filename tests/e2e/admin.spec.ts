@@ -22,9 +22,11 @@ test.describe("autenticação e shell administrativo", () => {
     await login(page, E2E_FIXTURES.member.email, E2E_FIXTURES.member.password);
 
     await expect(page).toHaveURL(/\/admin\/login\?erro=acesso$/);
-    await expect(page.getByRole("alert")).toContainText(
-      "Esta conta não possui acesso administrativo.",
-    );
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Esta conta não possui acesso administrativo." }),
+    ).toContainText("Esta conta não possui acesso administrativo.");
   });
 
   test("admin entra, visualiza aulas em ordem e sai com segurança", async ({ page }) => {
@@ -47,14 +49,18 @@ test.describe("autenticação e shell administrativo", () => {
     expect(classIds).toEqual(E2E_CLASS_ORDER);
 
     await page.getByRole("button", { name: "Nova aula" }).click();
-    await expect(page.getByLabel("Modalidade")).toBeVisible();
-    await expect(page.getByLabel("Dia da semana")).toBeVisible();
-    await expect(page.getByLabel("Período")).toBeVisible();
-    await expect(page.getByLabel("Local")).toBeVisible();
-    await expect(page.getByLabel("Horário inicial")).toBeVisible();
-    await expect(page.getByLabel("Horário final")).toBeVisible();
-    await expect(page.getByLabel(/Professor/i)).toHaveCount(0);
-    await expect(page.getByLabel(/Nível/i)).toHaveCount(0);
+    const classForm = page.locator("form").filter({
+      has: page.locator('input[name="modality"]'),
+    });
+
+    await expect(classForm.getByLabel("Modalidade")).toBeVisible();
+    await expect(classForm.getByLabel("Dia da semana")).toBeVisible();
+    await expect(classForm.getByLabel("Período")).toBeVisible();
+    await expect(classForm.getByLabel("Local")).toBeVisible();
+    await expect(classForm.getByLabel("Horário inicial")).toBeVisible();
+    await expect(classForm.getByLabel("Horário final")).toBeVisible();
+    await expect(classForm.getByLabel(/Professor/i)).toHaveCount(0);
+    await expect(classForm.getByLabel(/Nível/i)).toHaveCount(0);
 
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page).toHaveURL(/\/admin\/login$/);
